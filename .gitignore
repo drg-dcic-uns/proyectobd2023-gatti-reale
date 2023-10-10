@@ -1,0 +1,29 @@
+target/
+log/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+##############################
+## Eclipse
+##############################
+.settings/
+bin/
+tmp/
+.metadata
+.classpath
+.project
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.loadpath
+.factorypath
+.idea/
+.project
+##############################
+## Docker
+##############################
+docker/data/
