@@ -37,23 +37,22 @@ public class ModeloImpl implements Modelo {
 		/** TODO: ejecutar la consulta sql recibida como parámetro utilizando 
 		*         la propiedad conexion y devolver el resultado en un ResulSet
 		*/
-		/* 
-		try
-		{ 
-		 
+		ResultSet rs = null;
+
+		try {
+			Statement statement = this.conexion.createStatement();
+			rs = statement.executeQuery(sql);
+		} catch (SQLException e) {
+			throw new RuntimeException(e);
 		}
-		catch (SQLException ex){
-		   logger.error("SQLException: " + ex.getMessage());
-		   logger.error("SQLState: " + ex.getSQLState());
-		   logger.error("VendorError: " + ex.getErrorCode());
-		}
-		*/
-		return null;
+
+		return rs;
 	}	
 	
 	@Override
 	public void actualizacion (String sql)
-	{  /** TODO: ejecutar la consulta de actualizacion sql recibida como 
+	{
+		/** TODO: ejecutar la consulta de actualizacion sql recibida como
  		*       parámetro utilizando la propiedad conexion 
 		*/  
 		/*

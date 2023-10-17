@@ -18,8 +18,10 @@ import org.slf4j.LoggerFactory;
 public class Conexion {
 
 	private static Logger logger = LoggerFactory.getLogger(Conexion.class);	
-	
-    private static String url;    
+
+	private static String servidor = "localhost:3306";
+	private static String baseDatos = "parquimetros";
+    private static String url;
     private static String driverName;   
     private static Connection con;
     private static String urlstring;
@@ -31,8 +33,8 @@ public class Conexion {
 	            	
 	            	logger.debug("Parametros de conexion: url= {}, user={}, pass={}", Conexion.getUrlstring(), usuario, password);
 	            	
-	                con = DriverManager.getConnection(Conexion.getUrlstring(), 
-	                								  usuario, 
+	                con = java.sql.DriverManager.getConnection(Conexion.getUrlstring(),
+	                								  usuario,
 	                								  password);
 	                
 	            	logger.info("Se establece la conexión con la BD");	            	
@@ -51,8 +53,8 @@ public class Conexion {
     
     /**
      * Inicializa los parámetros de conexión con los valores definidos en el archivo de propiedades pasado como parámetro
-     * 
-     * @param property Archivo de propiedades con la ruta
+     *
+     * @param propertyFile Archivo de propiedades con la ruta
      */
 	public static void inicializar(String propertyFile)	
 	{

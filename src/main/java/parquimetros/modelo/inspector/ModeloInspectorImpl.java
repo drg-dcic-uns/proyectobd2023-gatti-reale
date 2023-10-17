@@ -1,21 +1,19 @@
 package parquimetros.modelo.inspector;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import parquimetros.modelo.ModeloImpl;
-import parquimetros.modelo.beans.InspectorBean;
-import parquimetros.modelo.beans.ParquimetroBean;
-import parquimetros.modelo.beans.UbicacionBean;
+import parquimetros.modelo.beans.*;
 import parquimetros.modelo.inspector.dao.DAOParquimetro;
 import parquimetros.modelo.inspector.dao.DAOParquimetroImpl;
 import parquimetros.modelo.inspector.dao.DAOInspector;
@@ -65,6 +63,25 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 		 *      que se hereda al extender la clase ModeloImpl.       
 		 *      
 		 */
+
+		 //codigo hecho por guido, pero el user inspector no tiene acceso a las ubicaciones de toda la bdd..¿como lo hacemos?
+
+		ArrayList<UbicacionBean> ubicaciones = new ArrayList<UbicacionBean>();
+		Statement statement = this.conexion.createStatement();
+		String sql = "SELECT * FROM ubicaciones";
+		java.sql.ResultSet rs = statement.executeQuery(sql);
+		while (rs.next()) {
+			String calle = rs.getString("calle");
+			String altura = rs.getString("altura");
+			String tarifa = rs.getString("tarifa");
+			UbicacionBeanImpl ubi = new UbicacionBeanImpl();
+			ubi.setCalle(calle);
+			ubi.setAltura(Integer.parseInt(altura));
+			ubi.setTarifa(Double.parseDouble(tarifa));
+			ubicaciones.add(ubi);
+		}
+
+		/*
 		ArrayList<UbicacionBean> ubicaciones = new ArrayList<UbicacionBean>();
 
 		// Datos estáticos de prueba. Quitar y reemplazar por código que recupera las ubicaciones de la B.D. en una lista de UbicacionesBean		 
@@ -74,8 +91,10 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 			ubicaciones.add(ubicacion);	
 		}
 		// Fin datos estáticos de prueba.
-	
+		*/
 		return ubicaciones;
+
+
 	}
 
 	@Override
@@ -92,44 +111,131 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 		 *      
 		 */
 
-		ArrayList<ParquimetroBean> parquimetros = new ArrayList<ParquimetroBean>();
+		Statement statement = this.conexion.createStatement();
+		String sql = "SELECT * FROM Parquimetros WHERE calle = ? AND altura = ?";
+		PreparedStatement preparedStatement = conexion.prepareStatement(sql);
+		preparedStatement.setString(1, ubicacion.getCalle());
+		preparedStatement.setInt(2, ubicacion.getAltura());
 
-		// Datos estáticos de prueba. Quitar y reemplazar por código que recupera los parquimetros de la B.D. en una lista de ParquimetroBean
-		DAOParquimetrosDatosPrueba.poblar(ubicacion);
-		
-		for (ParquimetroBean parquimetro : DAOParquimetrosDatosPrueba.datos.values()) {
-			parquimetros.add(parquimetro);	
+		ResultSet rs = preparedStatement.executeQuery();
+
+
+		//java.sql.ResultSet rs = statement.executeQuery(sql);
+		ArrayList<ParquimetroBean> parquimetros = new ArrayList<ParquimetroBean>();
+		while (rs.next()) {
+			ParquimetroBeanImpl parq = new ParquimetroBeanImpl();
+			parq.setUbicacion(ubicacion);
+			parq.setId(rs.getInt("id_parq"));
+			parq.setNumero(rs.getInt("numero"));
+			parquimetros.add(parq);
 		}
-		// Fin datos estáticos de prueba.
-	
+
 		return parquimetros;
 	}
-
 	@Override
 	public void conectarParquimetro(ParquimetroBean parquimetro, InspectorBean inspectorLogueado) throws ConexionParquimetroException, Exception {
 		// es llamado desde Controlador.conectarParquimetro
-  
-		logger.info(Mensajes.getMessage("ModeloInspectorImpl.conectarParquimetro.logger"),parquimetro.toString());
-		
+
+		logger.info(Mensajes.getMessage("ModeloInspectorImpl.conectarParquimetro.logger"), parquimetro.toString());
+
 		/** TODO Simula la conexión al parquímetro con el inspector que se encuentra logueado en el momento 
 		 *       en que se ejecuta la acción. 
-		 *       
+		 *
 		 *       Debe verificar si el inspector está habilitado a acceder a la ubicación del parquímetro 
 		 *       en el dia y hora actual, segun la tabla asociado_con. 
 		 *       Sino puede deberá producir una excepción ConexionParquimetroException.     
 		 *       En caso exitoso se registra su acceso en la tabla ACCEDE y retorna exitosamente.		         
-		 *     
+		 *
 		 *       Si hay un error no controlado se produce una Exception genérica.
-		 *       
+		 *
 		 *       Importante: Para acceder a la B.D. utilice la propiedad this.conexion (de clase Connection) 
 		 *       que se hereda al extender la clase ModeloImpl.
-		 *  
+		 *
 		 * @param parquimetro
 		 * @throws ConexionParquimetroException
 		 * @throws Exception
-		 */		
-		
+		 */
+		int legajo = inspectorLogueado.getLegajo();
+		Statement statement = this.conexion.createStatement();
+		String sql = "SELECT * FROM Asociado_con WHERE legajo = " + legajo;
+
+		java.sql.ResultSet rs = statement.executeQuery(sql);
+		int altura = parquimetro.getUbicacion().getAltura();
+		String calle = parquimetro.getUbicacion().getCalle();
+		Time hora = Time.valueOf(LocalDateTime.now().toLocalTime());
+		Date fecha = Date.valueOf(LocalDateTime.now().toLocalDate());
+
+
+		Time horaInicioManiana = Time.valueOf(LocalTime.of(8, 0));  // 8:00 AM
+		Time horaFinManiana = Time.valueOf(LocalTime.of(14, 0));   // 2:00 PM
+
+		Time horaInicioTarde = Time.valueOf(LocalTime.of(14, 0));  // 14:00 pM
+		Time horaFinTarde = Time.valueOf(LocalTime.of(20, 0));   // 20:00 PM
+
+
+		while (rs.next()) {
+			if (rs.getString("calle").equals(calle) &&
+					rs.getInt("altura") == altura
+					&& rs.getString("dia").equals(getDia())) {
+
+				if (rs.getString("turno").equals("m") &&
+						hora.after(horaInicioManiana) &&
+						hora.before(horaFinManiana)) {
+					insertar(fecha, hora, rs.getString("legajo"), parquimetro.getId());
+				} else {
+					if (rs.getString("turno").equals("t") &&
+							hora.after(horaInicioTarde) &&
+							hora.before(horaFinTarde)) {
+						insertar(fecha, hora, rs.getString("legajo"), parquimetro.getId());
+					} else
+						throw new ConexionParquimetroException("no se encontró");
+				}
+
+			}
+		}
 	}
+
+
+	private void insertar(Date fecha,Time hora, String legajo, int idParq) throws SQLException {
+		String insercion = "INSERT INTO Accede (fecha, hora, legajo, id_parq) VALUES (?, ?, ?, ?)";
+		PreparedStatement preparedStatement = conexion.prepareStatement(insercion);
+		preparedStatement.setTime(2, Time.valueOf(LocalDateTime.now().toLocalTime()));
+		preparedStatement.setDate(1, Date.valueOf(LocalDateTime.now().toLocalDate()));
+		preparedStatement.setString(3, legajo);
+		preparedStatement.setInt(4, idParq);
+		preparedStatement.executeUpdate();
+	}
+
+	 private static String getDia() {
+				String dia = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) + "";
+				switch (dia) {
+					case "Monday":
+						dia = "lu";
+						break;
+					case "Tuesday":
+						dia = "ma";
+						break;
+					case "Wednesday":
+						dia = "mi";
+						break;
+					case "Thursday":
+						dia = "ju";
+						break;
+					case "Friday":
+						dia = "vi";
+						break;
+					case "Saturday":
+						dia = "sa";
+						break;
+					case "Sunday":
+						dia = "do";
+						break;
+					default:
+						dia = "Día no válido";
+				}
+				return dia;
+			}
+
 
 	@Override
 	public UbicacionBean recuperarUbicacion(ParquimetroBean parquimetro) throws Exception {
