@@ -119,7 +119,7 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 		Time horaFinManiana = Time.valueOf(LocalTime.of(14, 0));   // 2:00 PM
 
 		Time horaInicioTarde = Time.valueOf(LocalTime.of(14, 0));  // 14:00 PM
-		Time horaFinTarde = Time.valueOf(LocalTime.of(23, 0));   // 20:00 PM
+		Time horaFinTarde = Time.valueOf(LocalTime.of(20, 0));   // 20:00 PM
 
 
 		while (rs.next()) {
@@ -159,16 +159,16 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 	 private static String getDia() {
 				String dia = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) + "";
 				switch (dia) {
-					case "Monday":
+					case "2":
 						dia = "lu";
 						break;
-					case "Tuesday":
+					case "3":
 						dia = "ma";
 						break;
-					case "Wednesday":
+					case "4":
 						dia = "mi";
 						break;
-					case "Thursday":
+					case "5":
 						dia = "ju";
 						break;
 					case "6":
@@ -330,8 +330,9 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 
 				nroMulta++;
 			}
+
+
 		}
-		// Fin datos prueba
 		return multas;		
 	}
 }
