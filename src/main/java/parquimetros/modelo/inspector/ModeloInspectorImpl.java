@@ -55,16 +55,6 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 	public ArrayList<UbicacionBean> recuperarUbicaciones() throws Exception {
 		
 		logger.info(Mensajes.getMessage("ModeloInspectorImpl.recuperarUbicaciones.logger"));
-		/** 
-		 * TODO Debe retornar una lista de UbicacionesBean con todas las ubicaciones almacenadas en la B.D. 
-		 *      Debería propagar una excepción si hay algún error en la consulta. 
-		 *      
-		 *      Importante: Para acceder a la B.D. utilice la propiedad this.conexion (de clase Connection) 
-		 *      que se hereda al extender la clase ModeloImpl.       
-		 *      
-		 */
-
-		 //codigo hecho por guido, pero el user inspector no tiene acceso a las ubicaciones de toda la bdd..¿como lo hacemos?
 
 		ArrayList<UbicacionBean> ubicaciones = new ArrayList<UbicacionBean>();
 		Statement statement = this.conexion.createStatement();
@@ -80,18 +70,6 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 			ubi.setTarifa(Double.parseDouble(tarifa));
 			ubicaciones.add(ubi);
 		}
-
-		/*
-		ArrayList<UbicacionBean> ubicaciones = new ArrayList<UbicacionBean>();
-
-		// Datos estáticos de prueba. Quitar y reemplazar por código que recupera las ubicaciones de la B.D. en una lista de UbicacionesBean		 
-		DAOUbicacionesDatosPrueba.poblar();
-		
-		for (UbicacionBean ubicacion : DAOUbicacionesDatosPrueba.datos.values()) {
-			ubicaciones.add(ubicacion);	
-		}
-		// Fin datos estáticos de prueba.
-		*/
 		return ubicaciones;
 
 
@@ -101,15 +79,6 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 	public ArrayList<ParquimetroBean> recuperarParquimetros(UbicacionBean ubicacion) throws Exception {
 		
 		logger.info(Mensajes.getMessage("ModeloInspectorImpl.recuperarParquimetros.logger"),ubicacion.toString());
-		
-		/** 
-		 * TODO Debe retornar una lista de ParquimetroBean con todos los parquimetros que corresponden a una ubicación.
-		 * 		Debería propagar una excepción si hay algún error en la consulta.
-		 *            
-		 *      Importante: Para acceder a la B.D. utilice la propiedad this.conexion (de clase Connection) 
-		 *      que se hereda al extender la clase ModeloImpl.      
-		 *      
-		 */
 
 		Statement statement = this.conexion.createStatement();
 		String sql = "SELECT * FROM Parquimetros WHERE calle = ? AND altura = ?";
@@ -119,8 +88,6 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 
 		ResultSet rs = preparedStatement.executeQuery();
 
-
-		//java.sql.ResultSet rs = statement.executeQuery(sql);
 		ArrayList<ParquimetroBean> parquimetros = new ArrayList<ParquimetroBean>();
 		while (rs.next()) {
 			ParquimetroBeanImpl parq = new ParquimetroBeanImpl();
@@ -134,27 +101,9 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 	}
 	@Override
 	public void conectarParquimetro(ParquimetroBean parquimetro, InspectorBean inspectorLogueado) throws ConexionParquimetroException, Exception {
-		// es llamado desde Controlador.conectarParquimetro
 
 		logger.info(Mensajes.getMessage("ModeloInspectorImpl.conectarParquimetro.logger"), parquimetro.toString());
 
-		/** TODO Simula la conexión al parquímetro con el inspector que se encuentra logueado en el momento 
-		 *       en que se ejecuta la acción. 
-		 *
-		 *       Debe verificar si el inspector está habilitado a acceder a la ubicación del parquímetro 
-		 *       en el dia y hora actual, segun la tabla asociado_con. 
-		 *       Sino puede deberá producir una excepción ConexionParquimetroException.     
-		 *       En caso exitoso se registra su acceso en la tabla ACCEDE y retorna exitosamente.		         
-		 *
-		 *       Si hay un error no controlado se produce una Exception genérica.
-		 *
-		 *       Importante: Para acceder a la B.D. utilice la propiedad this.conexion (de clase Connection) 
-		 *       que se hereda al extender la clase ModeloImpl.
-		 *
-		 * @param parquimetro
-		 * @throws ConexionParquimetroException
-		 * @throws Exception
-		 */
 		int legajo = inspectorLogueado.getLegajo();
 		Statement statement = this.conexion.createStatement();
 		String sql = "SELECT * FROM Asociado_con WHERE legajo = " + legajo;
@@ -169,8 +118,8 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 		Time horaInicioManiana = Time.valueOf(LocalTime.of(8, 0));  // 8:00 AM
 		Time horaFinManiana = Time.valueOf(LocalTime.of(14, 0));   // 2:00 PM
 
-		Time horaInicioTarde = Time.valueOf(LocalTime.of(14, 0));  // 14:00 pM
-		Time horaFinTarde = Time.valueOf(LocalTime.of(20, 0));   // 20:00 PM
+		Time horaInicioTarde = Time.valueOf(LocalTime.of(14, 0));  // 14:00 PM
+		Time horaFinTarde = Time.valueOf(LocalTime.of(23, 0));   // 20:00 PM
 
 
 		while (rs.next()) {
@@ -191,7 +140,8 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 						throw new ConexionParquimetroException("no se encontró");
 				}
 
-			}
+			}else
+				throw new ConexionParquimetroException("no se encontró");
 		}
 	}
 
@@ -221,13 +171,13 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 					case "Thursday":
 						dia = "ju";
 						break;
-					case "Friday":
+					case "6":
 						dia = "vi";
 						break;
-					case "Saturday":
+					case "7":
 						dia = "sa";
 						break;
-					case "Sunday":
+					case "1":
 						dia = "do";
 						break;
 					default:
@@ -259,45 +209,25 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 	public EstacionamientoPatenteDTO recuperarEstacionamiento(String patente, UbicacionBean ubicacion) throws Exception {
 
 		logger.info(Mensajes.getMessage("ModeloInspectorImpl.recuperarEstacionamiento.logger"),patente,ubicacion.getCalle(),ubicacion.getAltura());
-		/**
-		 * TODO Verifica si existe un estacionamiento abierto registrado la patente en la ubicación, y
-		 *	    de ser asi retorna un EstacionamientoPatenteDTO con estado Registrado (EstacionamientoPatenteDTO.ESTADO_REGISTRADO), 
-		 * 		y caso contrario sale con estado No Registrado (EstacionamientoPatenteDTO.ESTADO_NO_REGISTRADO).
-		 * 
-		 *      Importante: Para acceder a la B.D. utilice la propiedad this.conexion (de clase Connection) 
-		 *      que se hereda al extender la clase ModeloImpl.
-		 */
-		//
-		// Datos estáticos de prueba. Quitar y reemplazar por código que recupera los datos reale de la BD.
-		//
-		// Diseño de datos de prueba: Las patentes que terminan en 1 al 8 fueron verificados como existentes en la tabla automovil,
-		//                            las terminadas en 9 y 0 produjeron una excepción de AutomovilNoEncontradoException y Exception.
-		//                            entonces solo consideramos los casos terminados de 1 a 8
- 		// 
-		// Utilizaremos el criterio que si es par el último digito de patente entonces está registrado correctamente el estacionamiento.
-		//
-		String fechaEntrada, horaEntrada, estado;
-		
-		if (Integer.parseInt(patente.substring(patente.length()-1)) % 2 == 0) {
+
+		String fechaEntrada=null, horaEntrada=null, estado=null;
+
+		Statement statement = this.conexion.createStatement();
+
+		String sql = "SELECT * FROM Estacionados WHERE patente = '" + patente + "' AND calle = '" + ubicacion.getCalle() + "' AND altura = " + ubicacion.getAltura() + "";
+		ResultSet rs = statement.executeQuery(sql);
+		if(rs.next()){
 			estado = EstacionamientoPatenteDTO.ESTADO_REGISTRADO;
-
-			LocalDateTime currentDateTime = LocalDateTime.now();
-	        // Definir formatos para la fecha y la hora
-	        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-	        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-
-	        // Formatear la fecha y la hora como cadenas separadas
-	        fechaEntrada = currentDateTime.format(dateFormatter);
-	        horaEntrada = currentDateTime.format(timeFormatter);
-			
-		} else {
+			fechaEntrada = rs.getString("fecha_ent");
+			horaEntrada = rs.getString("hora_ent");
+		}
+		else{
 			estado = EstacionamientoPatenteDTO.ESTADO_NO_REGISTRADO;
 	        fechaEntrada = "";
 	        horaEntrada = "";
 		}
 
 		return new EstacionamientoPatenteDTOImpl(patente, ubicacion.getCalle(), String.valueOf(ubicacion.getAltura()), fechaEntrada, horaEntrada, estado);
-		// Fin de datos de prueba
 	}
 	
 
@@ -309,27 +239,50 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 
 		logger.info(Mensajes.getMessage("ModeloInspectorImpl.generarMultas.logger"),listaPatentes.size());		
 		
-		/** 
-		 * TODO Primero verificar si el inspector puede realizar una multa en esa ubicacion el dia y hora actual 
-		 *      segun la tabla asociado_con. Sino puede deberá producir una excepción de 
-		 *      InspectorNoHabilitadoEnUbicacionException. 
-		 *            
-		 * 		Luego para cada una de las patentes suministradas, si no tiene un estacionamiento abierto en dicha 
-		 *      ubicación, se deberá cargar una multa en la B.D. 
-		 *      
-		 *      Debe retornar una lista de las multas realizadas (lista de objetos MultaPatenteDTO).
-		 *      
-		 *      Importante: Para acceder a la B.D. utilice la propiedad this.conexion (de clase Connection) 
-		 *      que se hereda al extender la clase ModeloImpl.      
-		 */
-		
-		//Datos estáticos de prueba. Quitar y reemplazar por código que recupera los datos reales.
-		//
-		// 1) throw InspectorNoHabilitadoEnUbicacionException
-		//
+
+		int legajo = inspectorLogueado.getLegajo();
+		Statement statement = this.conexion.createStatement();
+		String sql = "SELECT * FROM Asociado_con WHERE legajo = " + legajo;
+		java.sql.ResultSet rs = statement.executeQuery(sql);
+		int altura = ubicacion.getAltura();
+		String calle = ubicacion.getCalle();
+		Time hora = Time.valueOf(LocalDateTime.now().toLocalTime());
+		Date fecha = Date.valueOf(LocalDateTime.now().toLocalDate());
+
+		Time horaInicioManiana = Time.valueOf(LocalTime.of(8, 0));  // 8:00 AM
+		Time horaFinManiana = Time.valueOf(LocalTime.of(14, 0));   // 2:00 PM
+
+		Time horaInicioTarde = Time.valueOf(LocalTime.of(14, 0));  // 14:00 PM
+		Time horaFinTarde = Time.valueOf(LocalTime.of(23, 0));   // 20:00 PM
+		boolean habilitado = false;
+		while (!habilitado && rs.next() ) {
+			if (rs.getString("calle").equals(calle) &&
+					rs.getInt("altura") == altura
+					&& rs.getString("dia").equals(getDia())) {
+
+				if (rs.getString("turno").equals("m") &&
+						hora.after(horaInicioManiana) &&
+						hora.before(horaFinManiana)) {
+					habilitado = true;
+
+				} else {
+					if (rs.getString("turno").equals("t") &&
+							hora.after(horaInicioTarde) &&
+							hora.before(horaFinTarde)) {
+						habilitado = true;
+					}
+				}
+
+			}
+
+		}
+		if(!habilitado) {
+			throw new InspectorNoHabilitadoEnUbicacionException();
+		}
+
 		ArrayList<MultaPatenteDTO> multas = new ArrayList<MultaPatenteDTO>();
-		int nroMulta = 1;
-		
+
+		int nroMulta = 2;
 		LocalDateTime currentDateTime = LocalDateTime.now();
         // Definir formatos para la fecha y la hora
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
@@ -338,7 +291,10 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
         // Formatear la fecha y la hora como cadenas separadas
         String fechaMulta = currentDateTime.format(dateFormatter);
         String horaMulta = currentDateTime.format(timeFormatter);
-		
+
+		Time horaMultaTime = Time.valueOf(LocalDateTime.now().toLocalTime());
+		Date fechaMultaDate = Date.valueOf(LocalDateTime.now().toLocalDate());
+
 		for (String patente : listaPatentes) {
 			
 			EstacionamientoPatenteDTO estacionamiento = this.recuperarEstacionamiento(patente,ubicacion);
@@ -352,6 +308,26 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 																horaMulta, 
 																String.valueOf(inspectorLogueado.getLegajo()));
 				multas.add(multa);
+
+
+
+
+
+				String sql1 = "INSERT INTO Multa (fecha, hora, id_asociado_con ,patente ) VALUES (?, ?, ?, ?)";
+				PreparedStatement statement1 = conexion.prepareStatement(sql1);
+
+				statement1.setString(4, patente);
+				statement1.setDate(1, fechaMultaDate);
+				statement1.setTime(2, horaMultaTime);
+				statement1.setInt(3, (rs.getInt("id_asociado_con")));
+
+				try {
+					// Tu código de inserción aquí
+					statement1.executeUpdate();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+
 				nroMulta++;
 			}
 		}

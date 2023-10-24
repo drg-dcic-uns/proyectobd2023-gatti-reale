@@ -33,10 +33,7 @@ public class ModeloImpl implements Modelo {
 	public ResultSet consulta(String sql)	       		
 	{
 		logger.info("Se intenta realizar la siguiente consulta {}",sql);
-		
-		/** TODO: ejecutar la consulta sql recibida como parámetro utilizando 
-		*         la propiedad conexion y devolver el resultado en un ResulSet
-		*/
+
 		ResultSet rs = null;
 
 		try {
