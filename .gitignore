@@ -1,7 +1,7 @@
 
 log/
 *.class
-*.jar
+
 *.war
 *.ear
 *.nar
