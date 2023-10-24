@@ -253,7 +253,7 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 		Time horaFinManiana = Time.valueOf(LocalTime.of(14, 0));   // 2:00 PM
 
 		Time horaInicioTarde = Time.valueOf(LocalTime.of(14, 0));  // 14:00 PM
-		Time horaFinTarde = Time.valueOf(LocalTime.of(23, 0));   // 20:00 PM
+		Time horaFinTarde = Time.valueOf(LocalTime.of(20, 0));   // 20:00 PM
 		boolean habilitado = false;
 		while (!habilitado && rs.next() ) {
 			if (rs.getString("calle").equals(calle) &&
