@@ -24,7 +24,7 @@ public class Conexion {
     private static String url;
     private static String driverName;   
     private static Connection con;
-    private static String urlstring;
+    private static String urlstring = "jdbc:mysql://"+ servidor + "/" +baseDatos+ "?serverTimeZone=America/Argentina/Buenos_Aires";
 
 	public static Connection getConnection(String usuario, String password) {
 		try { 	
