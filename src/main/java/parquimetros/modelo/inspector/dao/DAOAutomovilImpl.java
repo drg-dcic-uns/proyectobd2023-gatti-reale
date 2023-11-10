@@ -27,14 +27,14 @@ public class DAOAutomovilImpl implements DAOAutomovil {
 		String sql = "SELECT * FROM automoviles WHERE patente = '" + patente + "'";
 		java.sql.ResultSet rs = statement.executeQuery(sql);
 		boolean existe = false;
-		while (rs.next()) {
+		if (rs.next()) {
 			if (rs.getString("patente").equals(patente)){
 				existe = true;
-				break;
+
 			}
 		}
 		if (!existe){
-			throw new AutomovilNoEncontradoException(Mensajes.getMessage("DAOAutomovilImpl.verificarPatente.automovilNoEncontradoException"));
+			throw new AutomovilNoEncontradoException(Mensajes.getMessage("DAOAutomovilImpl.recuperarAutomovilPorPatente.AutomovilNoEncontradoException"));
 		}
 
 		/*

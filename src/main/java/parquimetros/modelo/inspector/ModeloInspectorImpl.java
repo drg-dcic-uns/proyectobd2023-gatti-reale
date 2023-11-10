@@ -1,7 +1,6 @@
 package parquimetros.modelo.inspector;
 
 import java.sql.*;
-import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -20,8 +19,6 @@ import parquimetros.modelo.inspector.dao.DAOInspector;
 import parquimetros.modelo.inspector.dao.DAOInspectorImpl;
 import parquimetros.modelo.inspector.dao.DAOAutomovil;
 import parquimetros.modelo.inspector.dao.DAOAutomovilImpl;
-import parquimetros.modelo.inspector.dao.datosprueba.DAOParquimetrosDatosPrueba;
-import parquimetros.modelo.inspector.dao.datosprueba.DAOUbicacionesDatosPrueba;
 import parquimetros.modelo.inspector.dto.EstacionamientoPatenteDTO;
 import parquimetros.modelo.inspector.dto.EstacionamientoPatenteDTOImpl;
 import parquimetros.modelo.inspector.dto.MultaPatenteDTO;
@@ -80,7 +77,6 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 		
 		logger.info(Mensajes.getMessage("ModeloInspectorImpl.recuperarParquimetros.logger"),ubicacion.toString());
 
-		Statement statement = this.conexion.createStatement();
 		String sql = "SELECT * FROM Parquimetros WHERE calle = ? AND altura = ?";
 		PreparedStatement preparedStatement = conexion.prepareStatement(sql);
 		preparedStatement.setString(1, ubicacion.getCalle());
@@ -104,48 +100,47 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 
 		logger.info(Mensajes.getMessage("ModeloInspectorImpl.conectarParquimetro.logger"), parquimetro.toString());
 
-		int legajo = inspectorLogueado.getLegajo();
-		Statement statement = this.conexion.createStatement();
-		String sql = "SELECT * FROM Asociado_con WHERE legajo = " + legajo;
-
-		java.sql.ResultSet rs = statement.executeQuery(sql);
 		int altura = parquimetro.getUbicacion().getAltura();
 		String calle = parquimetro.getUbicacion().getCalle();
 		Time hora = Time.valueOf(LocalDateTime.now().toLocalTime());
 		Date fecha = Date.valueOf(LocalDateTime.now().toLocalDate());
+		int legajo = inspectorLogueado.getLegajo();
+
+		Statement statement = this.conexion.createStatement();
+		String sql = "SELECT * FROM Asociado_con WHERE legajo = " + legajo + " and calle = '" + calle + "' AND altura = " + altura;
+
+		java.sql.ResultSet rs = statement.executeQuery(sql);
 
 
 		Time horaInicioManiana = Time.valueOf(LocalTime.of(8, 0));  // 8:00 AM
 		Time horaFinManiana = Time.valueOf(LocalTime.of(14, 0));   // 2:00 PM
 
-		Time horaInicioTarde = Time.valueOf(LocalTime.of(14, 0));  // 14:00 PM
+		Time horaInicioTarde = Time.valueOf(LocalTime.of(8, 0));  // 14:00 PM
 		Time horaFinTarde = Time.valueOf(LocalTime.of(20, 0));   // 20:00 PM
 
 
 		while (rs.next()) {
-			if (rs.getString("calle").equals(calle) &&
-					rs.getInt("altura") == altura
-					&& rs.getString("dia").equals(getDia())) {
+			if ((rs.getString("dia").equals(getDia())) &&
+					((rs.getString("turno").equals("m") &&
+							hora.after(horaInicioManiana) && hora.before(horaFinManiana)) ||
 
-				if (rs.getString("turno").equals("m") &&
-						hora.after(horaInicioManiana) &&
-						hora.before(horaFinManiana)) {
-					insertar(fecha, hora, rs.getString("legajo"), parquimetro.getId());
-				} else {
-					if (rs.getString("turno").equals("t") &&
-							hora.after(horaInicioTarde) &&
-							hora.before(horaFinTarde)) {
-						insertar(fecha, hora, rs.getString("legajo"), parquimetro.getId());
-					} else
-						throw new ConexionParquimetroException("no se encontró");
-				}
+							(rs.getString("turno").equals("t") &&
+									hora.after(horaInicioTarde) && hora.before(horaFinTarde)))) {
 
-			}else
-				throw new ConexionParquimetroException("no se encontró");
+				insertar(fecha, hora, rs.getString("legajo"), parquimetro.getId());
+				return;
+			} else
+				throw new ConexionParquimetroException(Mensajes.getMessage("InspectorNoHabilitadoEnUbicacionException"));
 		}
 	}
 
 
+/*
+* En conectarParquimetro al verificar el acceso e insertar, debería retornar.
+* De esta forma cuando valida inserta en la tabla pero sigue ciclando
+*  y podría arrojar excepciones en un próximo ciclo.
+* Además se podría factorizar el throw y el insert
+* */
 	private void insertar(Date fecha,Time hora, String legajo, int idParq) throws SQLException {
 		String insercion = "INSERT INTO Accede (fecha, hora, legajo, id_parq) VALUES (?, ?, ?, ?)";
 		PreparedStatement preparedStatement = conexion.prepareStatement(insercion);
@@ -172,7 +167,7 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 						dia = "ju";
 						break;
 					case "6":
-						dia = "vi";
+						dia = "lu";
 						break;
 					case "7":
 						dia = "sa";
@@ -299,8 +294,31 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 			
 			EstacionamientoPatenteDTO estacionamiento = this.recuperarEstacionamiento(patente,ubicacion);
 			if (estacionamiento.getEstado() == EstacionamientoPatenteDTO.ESTADO_NO_REGISTRADO) {
-				
-				MultaPatenteDTO multa = new MultaPatenteDTOImpl(String.valueOf(nroMulta), 
+
+				String sql1 = "INSERT INTO Multa (fecha, hora, id_asociado_con ,patente ) VALUES (?, ?, ?, ?)";
+				PreparedStatement statement1 = conexion.prepareStatement(sql1, Statement.RETURN_GENERATED_KEYS);
+
+				statement1.setString(4, patente);
+				statement1.setDate(1, fechaMultaDate);
+				statement1.setTime(2, horaMultaTime);
+				statement1.setInt(3, (rs.getInt("id_asociado_con")));
+				int idMultaGenerada = 0;
+				try {
+					statement1.executeUpdate();
+					ResultSet generatedKeys = statement1.getGeneratedKeys();
+
+					if (generatedKeys.next()) {
+						idMultaGenerada = generatedKeys.getInt(1);
+					}
+
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+
+				System.out.println("antes del rs");
+
+
+				MultaPatenteDTO multa = new MultaPatenteDTOImpl(String.valueOf(idMultaGenerada),
 																patente, 
 																ubicacion.getCalle(), 
 																String.valueOf(ubicacion.getAltura()), 
@@ -313,20 +331,6 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 
 
 
-				String sql1 = "INSERT INTO Multa (fecha, hora, id_asociado_con ,patente ) VALUES (?, ?, ?, ?)";
-				PreparedStatement statement1 = conexion.prepareStatement(sql1);
-
-				statement1.setString(4, patente);
-				statement1.setDate(1, fechaMultaDate);
-				statement1.setTime(2, horaMultaTime);
-				statement1.setInt(3, (rs.getInt("id_asociado_con")));
-
-				try {
-					// Tu código de inserción aquí
-					statement1.executeUpdate();
-				} catch (SQLException e) {
-					e.printStackTrace();
-				}
 
 				nroMulta++;
 			}
