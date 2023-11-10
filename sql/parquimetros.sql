@@ -211,6 +211,36 @@ INNER JOIN (
 ON p.id_parq = s.id_parq;
 
 
+
+
+
+DELIMITER //
+
+CREATE PROCEDURE conectarParquimetro(
+    IN id_parq_param INT UNSIGNED,
+    IN fecha_ent_param DATE,
+    IN hora_ent_param TIME,
+    IN id_tarjeta_param INT UNSIGNED
+)
+BEGIN
+
+    UPDATE Estacionamientos
+    SET fecha_ent = fecha_ent_param,
+        hora_ent = hora_ent_param
+    WHERE id_parq = id_parq_param
+    AND id_tarjeta = id_tarjeta_param;
+
+END //
+
+DELIMITER ;
+
+
+
+
+CREATE USER 'parquimetro'@'localhost' IDENTIFIED BY 'parq';
+GRANT EXECUTE ON PROCEDURE parquimetros.conectarParquimetro TO 'parquimetro'@'localhost';
+
+
 CREATE USER 'admin'@'localhost' IDENTIFIED BY 'admin';
 GRANT ALL PRIVILEGES ON parquimetros.* TO 'admin'@'localhost' WITH GRANT OPTION;
 
