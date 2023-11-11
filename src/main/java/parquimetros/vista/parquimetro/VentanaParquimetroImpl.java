@@ -169,7 +169,7 @@ public class VentanaParquimetroImpl extends JFrame implements VentanaParquimetro
 		this.frame.setBounds(20, 20, 850, 400);
 		/*
 		 * Se evita el comportamiento por defecto que hace un dispose de la ventana y cierra, porque 
-		 * se requiere que el controlador se haga cargo de cerrar todo, para cerrar las conexiones a la BD y luego
+		 * se requiere que el controlador se haga cargo de cerrar toodo, para cerrar las conexiones a la BD y luego
 		 * las ventanas.
 		 */
 		this.frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);

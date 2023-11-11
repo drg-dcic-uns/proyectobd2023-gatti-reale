@@ -30,13 +30,6 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 	@Override
 	public ArrayList<TarjetaBean> recuperarTarjetas() throws Exception {
 		logger.info(Mensajes.getMessage("ModeloParquimetroImpl.recuperarTarjetas.logger"));
-		/**
-		 * TODO Debe retornar una lista de UbicacionesBean con todas las tarjetas almacenadas en la B.D. 
-		 *      Deberia propagar una excepción si hay algún error en la consulta.
-		 *
-		 *      Importante: Para acceder a la B.D. utilice la propiedad this.conexion (de clase Connection) 
-		 *      que se hereda al extender la clase ModeloImpl. 
-		 */
 
 		ArrayList<TarjetaBean> tarjetas = new ArrayList<TarjetaBean>();
 
@@ -45,27 +38,40 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 		int id_tarjeta;
 		double saldo;
 		String sqlTemp;
-		try (PreparedStatement statement = this.conexion.prepareStatement(sql)) {
-			ResultSet rs = statement.executeQuery();
+		int dni;
+		PreparedStatement statement = null, statement1 = null, statement2 = null, statement3 = null;
+		ResultSet rs = null, rs1 = null, rs2 = null, rs3 = null;
+		try  {
+			statement = this.conexion.prepareStatement(sql);
+			rs = statement.executeQuery();
 
 			while (rs.next()) {
+
 				patente = rs.getString("patente");
 				id_tarjeta = rs.getInt("id_tarjeta");
 				saldo = rs.getDouble("saldo");
 				tipo = rs.getString("tipo");
+				System.out.println("patente igual a : " + patente);
+				sqlTemp = "SELECT * FROM Automoviles where patente = ?";
+				statement1 = this.conexion.prepareStatement(sqlTemp);
+				statement1.setString(1, patente);
 
-				sqlTemp = "SELECT * FROM Automoviles where patente = " + patente + "";
-				PreparedStatement statement1 = this.conexion.prepareStatement(sqlTemp);
-				ResultSet rs1 = statement1.executeQuery();
-				int dni = rs1.getInt("dni");
+				rs1 = statement1.executeQuery();
+
 				AutomovilBean a = new AutomovilBeanImpl();
-				if (rs.next()) {
+				if (rs1.next()) {
+					dni = rs1.getInt("dni");
+					sqlTemp = "SELECT * FROM Conductores where dni = ?";
 
-					sqlTemp = "SELECT * FROM Conductores where dni = " + dni + "";
-					PreparedStatement statement2 = this.conexion.prepareStatement(sqlTemp);
-					ResultSet rs2 = statement1.executeQuery();
+					statement2 = this.conexion.prepareStatement(sqlTemp);
+					statement2.setInt(1, dni);
+
+
+					rs2 = statement2.executeQuery();
 					ConductorBean c = new ConductorBeanImpl();
+
 					if (rs2.next()) {
+
 						c.setApellido(rs2.getString("apellido"));
 						c.setDireccion(rs2.getString("direccion"));
 						c.setNombre(rs2.getString("nombre"));
@@ -81,11 +87,13 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 					a.setConductor(c);
 				}
 
-				sqlTemp = "SELECT * FROM tipos_tarjeta where tipo = " + tipo + "";
-				PreparedStatement statement3 = this.conexion.prepareStatement(sqlTemp);
-				ResultSet rs3 = statement3.executeQuery();
+				sqlTemp = "SELECT * FROM tipos_tarjeta where tipo = ?";
+				statement3 = this.conexion.prepareStatement(sqlTemp);
+				statement3.setString(1, tipo);
+				rs3 = statement3.executeQuery();
 				TipoTarjetaBean tipoTarjeta = new TipoTarjetaBeanImpl();
 				if (rs3.next()) {
+
 					tipoTarjeta.setTipo(rs3.getString("tipo"));
 					tipoTarjeta.setDescuento(rs3.getDouble("descuento"));
 				}
@@ -96,27 +104,31 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 				t.setTipoTarjeta(tipoTarjeta);
 				t.setAutomovil(a);
 				tarjetas.add(t);
+				System.out.println("llegue hasta aca y numero de tarjetas = " + tarjetas.size());
 			}
+
 
 		} catch (SQLException e) {
 			// Manejar la excepción, por ejemplo, imprimir el stack trace
 			e.printStackTrace();
 		}
+		finally {
+			try {
+				if (rs != null) rs.close();
+				if (statement != null) statement.close();
+				if (rs1 != null) rs1.close();
+				if (statement1 != null) statement1.close();
+				if (rs2 != null) rs2.close();
+				if (statement2 != null) statement2.close();
+				if (rs3 != null) rs3.close();
+				if (statement3 != null) statement3.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
 		return tarjetas;
 	}
 
-		/*
-		// Datos estáticos de prueba. Quitar y reemplazar por código que recupera las ubicaciones de la B.D. en una lista de UbicacionesBean		 
-		DAOTarjetasDatosPrueba.poblar();
-		
-		for (TarjetaBean ubicacion : DAOTarjetasDatosPrueba.datos.values()) {
-			tarjetas.add(ubicacion);	
-		}
-		// Fin datos estáticos de prueba.
-	
-		return tarjetas;
-	}
-	*/
 	/*
 	 * Atención: Este codigo de recuperarUbicaciones (como el de recuperarParquimetros) es igual en el modeloParquimetro 
 	 *           y en modeloInspector. Se podría haber unificado en un DAO compartido. Pero se optó por dejarlo duplicado
@@ -125,53 +137,49 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 	 */
 	@Override
 	public ArrayList<UbicacionBean> recuperarUbicaciones() throws Exception {
-		
-		logger.info(Mensajes.getMessage("ModeloParquimetroImpl.recuperarUbicaciones.logger"));
-		
-		/** 
-		 * TODO Debe retornar una lista de UbicacionesBean con todas las ubicaciones almacenadas en la B.D. 
-		 *      Deberia propagar una excepción si hay algún error en la consulta.
-		 *      
-		 *      Importante: Para acceder a la B.D. utilice la propiedad this.conexion (de clase Connection) 
-		 *      que se hereda al extender la clase ModeloImpl. 
-		 */
-		ArrayList<UbicacionBean> ubicaciones = new ArrayList<UbicacionBean>();
+		logger.info(Mensajes.getMessage("ModeloInspectorImpl.recuperarUbicaciones.logger"));
 
-		// Datos estáticos de prueba. Quitar y reemplazar por código que recupera las ubicaciones de la B.D. en una lista de UbicacionesBean		 
-		DAOUbicacionesDatosPrueba.poblar();
-		
-		for (UbicacionBean ubicacion : DAOUbicacionesDatosPrueba.datos.values()) {
-			ubicaciones.add(ubicacion);	
+		ArrayList<UbicacionBean> ubicaciones = new ArrayList<UbicacionBean>();
+		Statement statement = this.conexion.createStatement();
+		String sql = "SELECT * FROM ubicaciones";
+		java.sql.ResultSet rs = statement.executeQuery(sql);
+		while (rs.next()) {
+			String calle = rs.getString("calle");
+			String altura = rs.getString("altura");
+			String tarifa = rs.getString("tarifa");
+			UbicacionBeanImpl ubi = new UbicacionBeanImpl();
+			ubi.setCalle(calle);
+			ubi.setAltura(Integer.parseInt(altura));
+			ubi.setTarifa(Double.parseDouble(tarifa));
+			ubicaciones.add(ubi);
 		}
-		// Fin datos estáticos de prueba.
-	
 		return ubicaciones;
+
 	}
 
 	@Override
 	public ArrayList<ParquimetroBean> recuperarParquimetros(UbicacionBean ubicacion) throws Exception {
 		logger.info(Mensajes.getMessage("ModeloParquimetroImpl.recuperarParquimetros.logger"));
-		
-		/** 
-		 * TODO Debe retornar una lista de ParquimetroBean con todos los parquimetros que corresponden a una ubicación.
-		 * 		 
-		 *      Debería propagar una excepción si hay algún error en la consulta.
-		 *      
-		 *      Importante: Para acceder a la B.D. utilice la propiedad this.conexion (de clase Connection) 
-		 *      que se hereda al extender la clase ModeloImpl. 
-		 */
+		logger.info(Mensajes.getMessage("ModeloInspectorImpl.recuperarParquimetros.logger"),ubicacion.toString());
+
+		String sql = "SELECT * FROM Parquimetros WHERE calle = ? AND altura = ?";
+		PreparedStatement preparedStatement = conexion.prepareStatement(sql);
+		preparedStatement.setString(1, ubicacion.getCalle());
+		preparedStatement.setInt(2, ubicacion.getAltura());
+
+		ResultSet rs = preparedStatement.executeQuery();
 
 		ArrayList<ParquimetroBean> parquimetros = new ArrayList<ParquimetroBean>();
-
-		// datos de prueba
-		DAOParquimetrosDatosPrueba.poblar(ubicacion);
-		
-		for (ParquimetroBean parquimetro : DAOParquimetrosDatosPrueba.datos.values()) {
-			parquimetros.add(parquimetro);	
+		while (rs.next()) {
+			ParquimetroBeanImpl parq = new ParquimetroBeanImpl();
+			parq.setUbicacion(ubicacion);
+			parq.setId(rs.getInt("id_parq"));
+			parq.setNumero(rs.getInt("numero"));
+			parquimetros.add(parq);
 		}
-		// Fin datos estáticos de prueba.
-	
+
 		return parquimetros;
+
 	}
 
 	@Override
@@ -179,13 +187,7 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 			throws SinSaldoSuficienteException, ParquimetroNoExisteException, TarjetaNoExisteException, Exception {
 
 		logger.info(Mensajes.getMessage("ModeloParquimetroImpl.conectarParquimetro.logger"),parquimetro.getId(),tarjeta.getId());
-		Statement statement = this.conexion.createStatement();
-		String sql = "SELECT * FROM tarjetas WHERE id_tarjeta = " + tarjeta.getId();
-		java.sql.ResultSet rs = statement.executeQuery(sql);
 
-		while(rs.next()){
-
-		}
 		/**
 		 * TODO Invoca al stored procedure conectar(...) que se encarga de realizar en una transacción la apertura o cierre 
 		 *      de estacionamiento segun corresponda.
