@@ -13,6 +13,8 @@ import parquimetros.modelo.inspector.exception.ConexionParquimetroException;
 import parquimetros.modelo.inspector.exception.InspectorNoAutenticadoException;
 import parquimetros.modelo.inspector.exception.InspectorNoHabilitadoEnUbicacionException;
 
+import javax.management.monitor.Monitor;
+
 public interface ModeloInspector extends Modelo {
 	
 	/**
@@ -58,7 +60,7 @@ public interface ModeloInspector extends Modelo {
 	 * @throws Exception
 	 */
 	public void conectarParquimetro(ParquimetroBean parquimetro, InspectorBean inspectorLogueado) throws ConexionParquimetroException, Exception;	
-	
+
 	/**
 	 * Recibe un parquimetro y busca la ubicación en la que se encuentra. 
 	 * Busca en la BD la ubicación y actualiza el valor de la ubicación 
