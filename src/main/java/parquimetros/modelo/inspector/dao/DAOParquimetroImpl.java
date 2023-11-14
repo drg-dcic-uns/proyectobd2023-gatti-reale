@@ -8,10 +8,7 @@ import java.sql.SQLException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import parquimetros.modelo.beans.InspectorBean;
-import parquimetros.modelo.beans.InspectorBeanImpl;
-import parquimetros.modelo.beans.ParquimetroBean;
-import parquimetros.modelo.beans.UbicacionBean;
+import parquimetros.modelo.beans.*;
 import parquimetros.modelo.inspector.dao.datosprueba.DAOParquimetrosDatosPrueba;
 
 public class DAOParquimetroImpl implements DAOParquimetro {
@@ -26,19 +23,32 @@ public class DAOParquimetroImpl implements DAOParquimetro {
 
 	@Override
 	public UbicacionBean recuperarUbicacion(ParquimetroBean parquimetro) throws Exception {
-		/**
-		 * TODO Recuperar  de la B.D. la ubicación de un parquimetro a patir de su ID
-		 * 
-		 *      Importante: Para acceder a la B.D. utilice la propiedad this.conexion (de clase Connection) 
-		 *      que se inicializa en el constructor.   
-		 */		
 
-		//Datos estáticos de prueba. Quitar y reemplazar por código que recupera los datos reales.
-		UbicacionBean ubicacion = DAOParquimetrosDatosPrueba.obtenerUbicacion(parquimetro.getId());
-		
+
+		String sql = "SELECT U.calle, U.altura, U.tarifa FROM Parquimetros P JOIN Ubicaciones U ON P.altura = U.altura " +
+				"AND P.calle = U.calle WHERE P.id_parq = ?";
+		PreparedStatement preparedStatement = null;
+		ResultSet rs = null;
+		UbicacionBean ubicacion = new UbicacionBeanImpl();
+
+		try{
+			preparedStatement = conexion.prepareStatement(sql);
+			rs = preparedStatement.executeQuery();
+			rs.next();
+
+			ubicacion.setCalle(rs.getString("calle"));
+			ubicacion.setAltura(rs.getInt("altura"));
+			ubicacion.setTarifa(rs.getDouble("tarifa"));
+		}catch (SQLException e) {
+			logger.error("Error al recuperar la ubicación del parquimetro", e);
+			throw new Exception("Error al recuperar la ubicación del parquimetro");
+		} finally {
+			if (preparedStatement != null)
+				preparedStatement.close();
+			if (rs != null)
+				rs.close();
+		}
 		return ubicacion;
-		//Fin datos de prueba 
-		
 	}
 
 

@@ -151,7 +151,7 @@ public class ControladorParquimetroImpl implements ControladorParquimetro {
 				
 			} else {
 				logger.warn("Houston we are in trouble!");
-				this.ventana.informar(":-(");
+				this.ventana.informar("vuelva a intentar en unos segundos");
 			}
 			
 		} catch (SinSaldoSuficienteException e) {

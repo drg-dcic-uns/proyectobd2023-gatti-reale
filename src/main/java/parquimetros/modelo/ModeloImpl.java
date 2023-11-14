@@ -1,9 +1,6 @@
 package parquimetros.modelo;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,20 +44,18 @@ public class ModeloImpl implements Modelo {
 	}	
 	
 	@Override
-	public void actualizacion (String sql)
-	{
-		/** TODO: ejecutar la consulta de actualizacion sql recibida como
- 		*       parámetro utilizando la propiedad conexion 
-		*/  
-		/*
-		try
-		{ 	
+	public void actualizacion (String sql) {
+
+		try {
+			PreparedStatement statement = this.conexion.prepareStatement(sql);
+			statement.executeUpdate();
+			statement.close();
 		}
 		catch (SQLException ex) {
 			logger.error("SQLException: " + ex.getMessage());
 			logger.error("SQLState: " + ex.getSQLState());
 			logger.error("VendorError: " + ex.getErrorCode());
 		}
-		*/
+
 	}	
 }

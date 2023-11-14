@@ -109,7 +109,7 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 
 
 		} catch (SQLException e) {
-			e.printStackTrace();
+			logger.error(Mensajes.getMessage("ModeloParquimetroImpl.recuperarTarjetas.error"), e);
 		} finally {
 			try {
 				if (rs != null) rs.close();
@@ -139,9 +139,10 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 
 		ArrayList<UbicacionBean> ubicaciones = new ArrayList<UbicacionBean>();
 		Statement statement = this.conexion.createStatement();
-		String sql = "SELECT * FROM ubicaciones";
+
 		ResultSet rs = null;
 		try {
+			String sql = "SELECT * FROM ubicaciones";
 			rs = statement.executeQuery(sql);
 			while (rs.next()) {
 				String calle = rs.getString("calle");
@@ -173,16 +174,15 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 		logger.info(Mensajes.getMessage("ModeloParquimetroImpl.recuperarParquimetros.logger"));
 		logger.info(Mensajes.getMessage("ModeloInspectorImpl.recuperarParquimetros.logger"), ubicacion.toString());
 
-		String sql = "SELECT * FROM Parquimetros WHERE calle = ? AND altura = ?";
-		PreparedStatement preparedStatement = conexion.prepareStatement(sql);
-		preparedStatement.setString(1, ubicacion.getCalle());
-		preparedStatement.setInt(2, ubicacion.getAltura());
+		PreparedStatement preparedStatement = null;
 		ArrayList<ParquimetroBean> parquimetros = new ArrayList<ParquimetroBean>();
 		ResultSet rs = null;
 		try {
+			String sql = "SELECT * FROM Parquimetros WHERE calle = ? AND altura = ?";
+			preparedStatement = conexion.prepareStatement(sql);
+			preparedStatement.setString(1, ubicacion.getCalle());
+			preparedStatement.setInt(2, ubicacion.getAltura());
 			rs = preparedStatement.executeQuery();
-
-
 			while (rs.next()) {
 				ParquimetroBeanImpl parq = new ParquimetroBeanImpl();
 				parq.setUbicacion(ubicacion);
@@ -196,7 +196,7 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 			}
 		finally {
 				try {
-					preparedStatement.close();
+					if (preparedStatement != null) preparedStatement.close();
 					if (rs != null) rs.close();
 				} catch (SQLException e) {
 					e.printStackTrace();
@@ -212,16 +212,6 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 
 		logger.info(Mensajes.getMessage("ModeloParquimetroImpl.conectarParquimetro.logger"), parquimetro.getId(), tarjeta.getId());
 
-		/**
-		 * TODO Invoca al stored procedure conectar(...) que se encarga de realizar en una transacción la apertura o cierre 
-		 *      de estacionamiento segun corresponda.
-		 *
-		 *      Segun la infromacion devuelta por el stored procedure se retorna un objeto EstacionamientoDTO o
-		 *      dependiendo del error se produce la excepción correspondiente:
-		 *       SinSaldoSuficienteException, ParquimetroNoExisteException, TarjetaNoExisteException     
-		 *
-		 */
-
 		try {
 			String sql1 = "Select hora_ent, fecha_ent from Estacionamientos where id_tarjeta = ? AND fecha_sal IS NULL AND hora_sal IS NULL";
 			PreparedStatement pS = conexion.prepareStatement(sql1);
@@ -234,27 +224,38 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 			if (rs1.next()) {
 				fechaApertura = rs1.getDate("fecha_ent");
 				horaApertura2 = rs1.getTime("hora_ent");
-				System.out.println(rs1.getTimestamp("hora_ent").toLocalDateTime());
 
 			}
 			String sql = "{CALL conectar(?, ?)}";
 
 			ResultSet rs = null;
-			try (CallableStatement cs = conexion.prepareCall(sql)) {
+			CallableStatement cs = null;
+			try {
+				cs = conexion.prepareCall(sql);
 				cs.setInt(1, tarjeta.getId());
 				cs.setInt(2, parquimetro.getId());
-				cs.execute();
+				rs = cs.executeQuery();
 
 				try {
-					rs = cs.getResultSet();
 					if (rs.next()) {
-						String operacionExitosa = rs.getString("resultado");
+						try {
+							System.out.println(rs.getString(1));
+							System.out.println(rs.getInt("tiempoRestante"));
+						}catch (SQLException e) {
+							System.out.println("No hay tiempo restante");
+						}
+						try {
+							System.out.println(rs.getString(1));
+							System.out.println(rs.getTime("saldo"));
+						}catch (SQLException e) {
+							System.out.println("No hay saldo");
+						}
 						String tipoOperacion = rs.getString("operacion");
 						Time horaActual = null;
 						Date fechaActual = null;
 
 						int tiempoRestante = 0;
-						if (tipoOperacion.equals("Apertura") && operacionExitosa.equals("La operacion se realizo con exito")) {
+						if (tipoOperacion.equals("Apertura") &&  rs.getString("resultado").equals("La operacion se realizo con exito")) {
 							tiempoRestante = rs.getInt("tiempoRestante");
 							String sql2 = "SELECT CURTIME() AS horaActual, CURDATE() AS fechaActual";
 							PreparedStatement statement = conexion.prepareStatement(sql2);
@@ -262,7 +263,6 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 							if (fechaHora.next()) {
 								horaActual = fechaHora.getTime("horaActual");
 								fechaActual = fechaHora.getDate("fechaActual");
-								System.out.println(fechaHora.getTime("horaActual"));
 							}
 
 							return new EntradaEstacionamientoDTOImpl("" + tiempoRestante, "" + fechaActual, "" + horaActual);
@@ -277,14 +277,14 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 
 							return new SalidaEstacionamientoDTOImpl("" + tiempoTranscurrido, "" + saldoActualizado, "" + fechaApertura,
 									"" + horaApertura2, "" + fechaCierre, "" + horaCierre);
-						} else if (operacionExitosa.equals("Saldo de la tarjeta insuficiente") || operacionExitosa.equals("Error tarjeta o parquimetro inexistente")) {
+						} else if ( rs.getString("resultado").equals("Saldo de la tarjeta insuficiente") ||  rs.getString("resultado").equals("Error tarjeta o parquimetro inexistente")) {
 							throw new SinSaldoSuficienteException("Sin Saldo suficiente");
 						}
 					}
 				} catch (SQLException e) {
 					// Manejar las excepciones de SQL según sea necesario
 					e.printStackTrace();
-					throw new Exception("Error al ejecutar el procedimiento almacenado conectar", e);
+					throw new Exception("  espere unos segundos antes de reintentar", e);
 				}
 
 			} catch (SQLException e) {
@@ -292,14 +292,17 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 				e.printStackTrace();
 				throw new Exception("Error al obtener la conexión a la base de datos", e);
 			} finally {
+				pS.close();
+				if (cs != null) cs.close();
 				rs1.close();
-				rs.close();
+				if (rs != null) rs.close();
 			}
 
 		} catch (SQLException e) {
 			// En caso de algún problema inesperado, lanzar una excepción general
 			throw new Exception("Error inesperado al conectar el parquímetro");
 		}
+
 		return null;
 	}
 }

@@ -26,29 +26,33 @@ public class DAOInspectorImpl implements DAOInspector {
 	public InspectorBean autenticar(String legajo, String password) throws InspectorNoAutenticadoException, Exception {
 
 		String sql = "SELECT * FROM inspectores WHERE legajo = ? AND password = md5(?)";
-		try (PreparedStatement preparedStatement = conexion.prepareStatement(sql)) {
-
+		PreparedStatement preparedStatement = null;
+		ResultSet rs = null;
+		InspectorBean inspectorAutenticado = new InspectorBeanImpl();
+		try {
+			preparedStatement = conexion.prepareStatement(sql);
 			preparedStatement.setString(1, legajo);
 			preparedStatement.setString(2, password);
+			rs = preparedStatement.executeQuery();
 
-			try (ResultSet rs = preparedStatement.executeQuery()) {
-
-				InspectorBean inspectorAutenticado = new InspectorBeanImpl();
-
-				if (rs.next()) {
-					inspectorAutenticado.setLegajo(Integer.parseInt(rs.getString("legajo")));
-					inspectorAutenticado.setApellido(rs.getString("apellido"));
-					inspectorAutenticado.setNombre(rs.getString("nombre"));
-					inspectorAutenticado.setDNI(Integer.parseInt(rs.getString("dni")));
-					inspectorAutenticado.setPassword(rs.getString("password"));
-				} else
-					throw new InspectorNoAutenticadoException(Mensajes.getMessage("DAOInspectorImpl.autenticar.inspectorNoAutenticado"));
-
-				return inspectorAutenticado;
-
-			}
-
-
+			if (rs.next()) {
+				inspectorAutenticado.setLegajo(Integer.parseInt(rs.getString("legajo")));
+				inspectorAutenticado.setApellido(rs.getString("apellido"));
+				inspectorAutenticado.setNombre(rs.getString("nombre"));
+				inspectorAutenticado.setDNI(Integer.parseInt(rs.getString("dni")));
+				inspectorAutenticado.setPassword(rs.getString("password"));
+			} else
+				throw new InspectorNoAutenticadoException(Mensajes.getMessage("DAOInspectorImpl.autenticar.inspectorNoAutenticado"));
+			}catch (Exception e) {
+				logger.error(Mensajes.getMessage("DAOInspectorImpl.autenticar.error"), e);
+				throw new Exception(Mensajes.getMessage("DAOInspectorImpl.autenticar.error"));
 		}
+		finally {
+			if (preparedStatement != null)
+				preparedStatement.close();
+			if (rs != null)
+				rs.close();
+		}
+		return inspectorAutenticado;
 	}
 }
