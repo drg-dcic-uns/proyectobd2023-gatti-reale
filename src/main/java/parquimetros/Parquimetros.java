@@ -31,7 +31,6 @@ public class Parquimetros {
 					
 					ModeloLogin modelo = new ModeloLoginImpl();  
 					VentanaLogin ventana = new VentanaLoginImpl();
-					@SuppressWarnings("unused")
 					ControladorLogin controlador = new ControladorLoginImpl(ventana, modelo);
 					
 				} catch (Exception e) {

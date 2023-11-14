@@ -14,11 +14,11 @@ INSERT INTO Tipos_tarjeta VALUES('B', 0.30);
 INSERT INTO Tipos_tarjeta VALUES('C', 0.60);
 
 INSERT INTO Tarjetas (patente,saldo,tipo,id_tarjeta)
-VALUES('MBU793', 215.56, 'A',1);
+VALUES('MBU793', 500.21, 'A',1);
 INSERT INTO Tarjetas (patente,saldo,tipo,id_tarjeta)
-VALUES('ASD123', 215.56, 'B',2);
+VALUES('ASD123', 999.99, 'B',2);
 INSERT INTO Tarjetas (patente,saldo,tipo, id_tarjeta)
-VALUES('FGH456', 215.56, 'C',3);
+VALUES('FGH456', 999.56, 'C',3);
 
 
 INSERT INTO Recargas (fecha, hora, saldo_anterior, saldo_posterior,id_tarjeta)
@@ -41,14 +41,14 @@ VALUES (2, 002, 'Calle Secundaria', 150);
 INSERT INTO Parquimetros (id_parq, numero, calle, altura)
 VALUES (3, 003, 'Tercer Calle', 200);
 
-
+/*
 INSERT INTO Estacionamientos (id_parq, fecha_ent, hora_ent, id_tarjeta)
-VALUES (1, '2023-10-23', '18:00:00', 1);
+VALUES (1, '2023-11-13', '10:00:00', 1);
 INSERT INTO Estacionamientos (id_parq, fecha_ent, hora_ent, id_tarjeta)
-VALUES (2, '2023-09-15', '17:30:00', 2);
+VALUES (2, '2023-11-13', '17:30:00', 2);
 INSERT INTO Estacionamientos (id_parq, fecha_ent, hora_ent, id_tarjeta)
-VALUES (3, '2023-09-15', '19:15:00', 3);
-
+VALUES (3, '2023-11-12', '19:15:00', 3);
+*/
 
 INSERT INTO Asociado_con (id_asociado_con, dia, turno, calle, altura, legajo)
 VALUES (1, 'lu', 't', 'Calle Principal', 100, 1);

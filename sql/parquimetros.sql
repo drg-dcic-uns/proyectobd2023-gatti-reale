@@ -211,25 +211,93 @@ INNER JOIN (
 ON p.id_parq = s.id_parq;
 
 
+#Procedure conectar
+DELIMITER !
+create procedure conectar(IN id_tarjeta INTEGER,IN id_parq INTEGER)
+begin
+     DECLARE fechaEntrada , fechaSalida DATE;
+    DECLARE horaEntrada, horaSalida TIME;
+    DECLARE tarjeta ,parquimetro INTEGER;
+    DECLARE saldoActual DECIMAL;
+    DECLARE descuentoAplicado DECIMAL(3,2);
+    DECLARE tiempoTranscurrido INTEGER;
+    DECLARE tiempoRestante INTEGER;
+    DECLARE tarifaActual DECIMAL(5,2);
+    DECLARE abierto BOOL;
+    DECLARE codigo_SQL CHAR(5) DEFAULT '00000';
+    DECLARE codigo_MYSQL INT DEFAULT 0;
+    DECLARE mensaje_error TEXT;
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+        BEGIN
+            GET DIAGNOSTICS CONDITION 1 codigo_MYSQL= MYSQL_ERRNO,
+            codigo_SQL= RETURNED_SQLSTATE,
+            mensaje_error= MESSAGE_TEXT;
+            SELECT 'SQLEXCEPTION, transaccion abortada' AS resultado,
+            codigo_MySQL, codigo_SQL, mensaje_error;
+            ROLLBACK;
 
+        end ;
+
+    START TRANSACTION;
+
+        if(id_tarjeta is not null and id_parq is not null and EXISTS(SELECT t.id_tarjeta from tarjetas t where t.id_tarjeta=id_tarjeta) and EXISTS(SELECT p.id_parq from parquimetros p  where p.id_parq=id_parq)) then
+            set tarjeta=id_tarjeta;
+            set abierto=false;
+            SELECT saldo,descuento INTO saldoActual, descuentoAplicado FROM tarjetas t natural join tipos_tarjeta tt where tarjeta=t.id_tarjeta limit 1;
+            if(EXISTS(SELECT fecha_ent,hora_ent,fecha_sal,hora_sal FROM estacionamientos e WHERE tarjeta=e.id_tarjeta order by fecha_sal,hora_sal desc)) then
+                SELECT fecha_ent,hora_ent,fecha_sal,hora_sal,e.id_parq INTO fechaEntrada,horaEntrada,fechaSalida,horaSalida,parquimetro FROM estacionamientos e WHERE tarjeta=e.id_tarjeta order by fecha_sal,hora_sal desc limit 1;
+                if(fechaSalida is NULL and  horaSalida is null) then
+                    SELECT tarifa INTO tarifaActual FROM parquimetros p NATURAL JOIN ubicaciones u WHERE p.id_parq=parquimetro limit 1;
+                    set abierto=true;
+                    set fechaSalida=CURDATE();
+                    set horaSalida=CURTIME();
+                    set tiempoTranscurrido= TIMESTAMPDIFF(MINUTE,CONCAT(fechaEntrada, ' ', horaEntrada),CONCAT(fechaSalida, ' ', horaSalida));
+                    set saldoActual=GREATEST(-999.99, TRUNCATE(saldoActual-(tiempoTranscurrido*tarifaActual*(1-descuentoAplicado)),2));
+                    UPDATE estacionamientos e set e.fecha_sal=fechaSalida,e.hora_sal=horaSalida  where e.id_tarjeta=tarjeta and e.fecha_ent=fechaEntrada and e.hora_ent=horaEntrada;
+                    UPDATE tarjetas t set t.saldo=saldoActual where t.id_tarjeta=tarjeta;
+                    SELECT 'Cierre' as operacion, '' as resultado, saldoActual as saldo ,tiempoTranscurrido, fechaEntrada as Fecha_apertura, fechaSalida as Fecha_cierre, horaEntrada, horaSalida;
+                end if ;
+
+            end if;
+
+           if(not EXISTS(SELECT fecha_ent,hora_ent, fecha_sal, hora_sal FROM estacionamientos e WHERE tarjeta=e.id_tarjeta order by fecha_sal,hora_sal desc limit 1) or abierto=false) then
+                if(saldoActual>0) then
+                    set fechaEntrada=CURDATE();
+                    set horaEntrada=CURTIME();
+                    set  parquimetro=id_parq;
+                    SELECT tarifa INTO tarifaActual FROM parquimetros p NATURAL JOIN ubicaciones u WHERE p.id_parq=parquimetro limit 1;
+                    set tiempoRestante = saldoActual/(tarifaActual*(1-descuentoAplicado));
+                    INSERT INTO estacionamientos(id_tarjeta,id_parq,fecha_ent,hora_ent,fecha_sal,hora_sal)VALUES (tarjeta,parquimetro,fechaEntrada,horaEntrada,null,null);
+                    SELECT 'Apertura' as operacion, 'La operacion se realizo con exito' as resultado ,tiempoRestante;
+                else
+                    begin
+                        SELECT 'Saldo de la tarjeta insuficiente' as resultado,'' as operacion;
+                    end;
+                end if;
+
+            end if ;
+
+        else
+            begin
+                SELECT 'Error tarjeta o parquimetro inexistente' as resultado, '' as operacion;
+            end;
+        end if ;
+COMMIT;
+end !
+
+DELIMITER ;
 
 
 DELIMITER //
 
-CREATE PROCEDURE conectarParquimetro(
-    IN id_parq_param INT UNSIGNED,
-    IN fecha_ent_param DATE,
-    IN hora_ent_param TIME,
-    IN id_tarjeta_param INT UNSIGNED
-)
+CREATE TRIGGER traza_recargas
+AFTER UPDATE ON Tarjetas
+FOR EACH ROW
 BEGIN
-
-    UPDATE Estacionamientos
-    SET fecha_ent = fecha_ent_param,
-        hora_ent = hora_ent_param
-    WHERE id_parq = id_parq_param
-    AND id_tarjeta = id_tarjeta_param;
-
+    IF NEW.saldo > OLD.saldo THEN
+        INSERT INTO Recargas (id_tarjeta, fecha, hora, saldo_anterior, saldo_posterior)
+        VALUES (NEW.id_tarjeta, CURDATE(), CURTIME(), OLD.saldo, NEW.saldo);
+    END IF;
 END //
 
 DELIMITER ;
@@ -237,15 +305,16 @@ DELIMITER ;
 
 
 
+
 CREATE USER 'parquimetro'@'%' IDENTIFIED BY 'parq';
-GRANT EXECUTE ON PROCEDURE parquimetros.conectarParquimetro TO 'parquimetro'@'%';
+GRANT EXECUTE ON PROCEDURE parquimetros.conectar TO 'parquimetro'@'%';
 GRANT SELECT ON parquimetros.Automoviles TO 'parquimetro'@'%';
 GRANT SELECT ON parquimetros.Conductores TO 'parquimetro'@'%';
 GRANT SELECT ON parquimetros.Tipos_tarjeta TO 'parquimetro'@'%';
 GRANT SELECT ON parquimetros.Tarjetas TO 'parquimetro'@'%';
 GRANT SELECT ON parquimetros.Ubicaciones TO 'parquimetro'@'%';
 GRANT SELECT ON parquimetros.Parquimetros TO 'parquimetro'@'%';
-
+GRANT SELECT ON parquimetros.Estacionamientos TO 'parquimetro'@'%';
 
 CREATE USER 'admin'@'localhost' IDENTIFIED BY 'admin';
 GRANT ALL PRIVILEGES ON parquimetros.* TO 'admin'@'localhost' WITH GRANT OPTION;
