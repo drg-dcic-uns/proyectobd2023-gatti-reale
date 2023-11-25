@@ -215,10 +215,10 @@ ON p.id_parq = s.id_parq;
 DELIMITER !
 create procedure conectar(IN id_tarjeta INTEGER,IN id_parq INTEGER)
 begin
-     DECLARE fechaEntrada , fechaSalida DATE;
+    DECLARE fechaEntrada , fechaSalida DATE;
     DECLARE horaEntrada, horaSalida TIME;
     DECLARE tarjeta ,parquimetro INTEGER;
-    DECLARE saldoActual DECIMAL;
+    DECLARE saldoActual DECIMAL(5,2);
     DECLARE descuentoAplicado DECIMAL(3,2);
     DECLARE tiempoTranscurrido INTEGER;
     DECLARE tiempoRestante INTEGER;
@@ -243,16 +243,20 @@ begin
         if(id_tarjeta is not null and id_parq is not null and EXISTS(SELECT t.id_tarjeta from tarjetas t where t.id_tarjeta=id_tarjeta) and EXISTS(SELECT p.id_parq from parquimetros p  where p.id_parq=id_parq)) then
             set tarjeta=id_tarjeta;
             set abierto=false;
-            SELECT saldo,descuento INTO saldoActual, descuentoAplicado FROM tarjetas t natural join tipos_tarjeta tt where tarjeta=t.id_tarjeta limit 1;
+            SELECT saldo, descuento INTO saldoActual, descuentoAplicado FROM tarjetas t natural join tipos_tarjeta tt where tarjeta=t.id_tarjeta limit 1;
             if(EXISTS(SELECT fecha_ent,hora_ent,fecha_sal,hora_sal FROM estacionamientos e WHERE tarjeta=e.id_tarjeta order by fecha_sal,hora_sal desc)) then
                 SELECT fecha_ent,hora_ent,fecha_sal,hora_sal,e.id_parq INTO fechaEntrada,horaEntrada,fechaSalida,horaSalida,parquimetro FROM estacionamientos e WHERE tarjeta=e.id_tarjeta order by fecha_sal,hora_sal desc limit 1;
                 if(fechaSalida is NULL and  horaSalida is null) then
+                    SELECT saldo INTO saldoActual FROM tarjetas t 
+                    WHERE t.id_tarjeta = tarjeta 
+                    LIMIT 1 
+                    FOR UPDATE;
                     SELECT tarifa INTO tarifaActual FROM parquimetros p NATURAL JOIN ubicaciones u WHERE p.id_parq=parquimetro limit 1;
                     set abierto=true;
                     set fechaSalida=CURDATE();
                     set horaSalida=CURTIME();
                     set tiempoTranscurrido= TIMESTAMPDIFF(MINUTE,CONCAT(fechaEntrada, ' ', horaEntrada),CONCAT(fechaSalida, ' ', horaSalida));
-                    set saldoActual=GREATEST(-999.99, TRUNCATE(saldoActual-(tiempoTranscurrido*tarifaActual*(1-descuentoAplicado)),2));
+                    set saldoActual=GREATEST(-999.99, saldoActual-(tiempoTranscurrido*tarifaActual*(1-descuentoAplicado)));
                     UPDATE estacionamientos e set e.fecha_sal=fechaSalida,e.hora_sal=horaSalida  where e.id_tarjeta=tarjeta and e.fecha_ent=fechaEntrada and e.hora_ent=horaEntrada;
                     UPDATE tarjetas t set t.saldo=saldoActual where t.id_tarjeta=tarjeta;
                     SELECT 'Cierre' as operacion, saldoActual as saldo ,tiempoTranscurrido, fechaEntrada as Fecha_apertura, fechaSalida as Fecha_cierre, horaEntrada, horaSalida;
