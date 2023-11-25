@@ -155,8 +155,7 @@ public class ModeloInspectorImpl extends ModeloImpl implements ModeloInspector {
 
 					insertar( rs.getString("legajo"), parquimetro.getId());
 					return;
-				} else
-					throw new ConexionParquimetroException(Mensajes.getMessage("InspectorNoHabilitadoEnUbicaionException"));
+				}
 			}
 			throw new ConexionParquimetroException(Mensajes.getMessage("InspectorNoHabilitadoEnUbicacionException"));
 		}catch (SQLException e) {
