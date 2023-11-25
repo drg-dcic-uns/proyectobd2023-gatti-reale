@@ -277,9 +277,11 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 
 							return new SalidaEstacionamientoDTOImpl("" + tiempoTranscurrido, "" + saldoActualizado, "" + fechaApertura,
 									"" + horaApertura2, "" + fechaCierre, "" + horaCierre);
-						} else if ( rs.getString("resultado").equals("Saldo de la tarjeta insuficiente") ||  rs.getString("resultado").equals("Error tarjeta o parquimetro inexistente")) {
+						} else if ( rs.getString("resultado").equals("Saldo de la tarjeta insuficiente")){
 							throw new SinSaldoSuficienteException("Sin Saldo suficiente");
-						}
+							} else if (rs.getString("resultado").equals("Error tarjeta inexistente")) {
+								throw new TarjetaNoExisteException();
+								} else throw new ParquimetroNoExisteException();
 					}
 				} catch (SQLException e) {
 					// Manejar las excepciones de SQL según sea necesario

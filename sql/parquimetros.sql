@@ -280,15 +280,16 @@ begin
                 end if;
 
             end if ;
+        ELSE
+            IF (NOT EXISTS(SELECT t.id_tarjeta FROM tarjetas t WHERE t.id_tarjeta = id_tarjeta) OR id_tarjeta IS NULL) THEN
+                SELECT 'Error tarjeta inexistente' AS resultado, '' AS operacion;
+            ELSE
+                SELECT 'Error parquimetro inexistente' AS resultado, '' AS operacion;
+            END IF;
+    END IF;
 
-        else
-            begin
-                SELECT 'Error tarjeta o parquimetro inexistente' as resultado, '' as operacion;
-            end;
-        end if ;
-COMMIT;
-end !
-
+    COMMIT;
+END !
 DELIMITER ;
 
 
