@@ -32,34 +32,39 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 	public ArrayList<TarjetaBean> recuperarTarjetas() throws Exception {
 		logger.info(Mensajes.getMessage("ModeloParquimetroImpl.recuperarTarjetas.logger"));
 
-		ArrayList<TarjetaBean> tarjetas = new ArrayList<>();
+		ArrayList<TarjetaBean> tarjetas = new ArrayList<TarjetaBean>();
 
-		String sql = "SELECT t.id_tarjeta, t.saldo, t.tipo, a.patente, a.modelo, a.color, a.marca, " +
-				"c.dni, c.apellido, c.direccion, c.nombre, c.registro, c.telefono, " +
-				"tt.descuento " +
-				"FROM tarjetas t " +
-				"NATURAL JOIN Automoviles a ON t.patente = a.patente " +
-				"NATURAL JOIN Conductores c ON a.dni = c.dni " +
-				"NATURAL JOIN tipos_tarjeta tt ON t.tipo = tt.tipo";
-
-		try (PreparedStatement statement = this.conexion.prepareStatement(sql);
-			 ResultSet rs = statement.executeQuery()) {
+		String sql = "SELECT tarjetas.id_tarjeta, tarjetas.saldo, tarjetas.tipo, " +
+				"Automoviles.modelo, Automoviles.color, Automoviles.marca, Automoviles.patente, " +
+				"Conductores.apellido, Conductores.direccion, Conductores.nombre, Conductores.registro, Conductores.dni, Conductores.telefono, " +
+				"tipos_tarjeta.tipo, tipos_tarjeta.descuento " +
+				"FROM tarjetas " +
+				"NATURAL JOIN Automoviles " +
+				"NATURAL JOIN Conductores " +
+				"NATURAL JOIN tipos_tarjeta";
+		PreparedStatement statement = null;
+		ResultSet rs = null;
+		try {
+			statement = this.conexion.prepareStatement(sql);
+			rs = statement.executeQuery();
 
 			while (rs.next()) {
-				TarjetaBean t = new TarjetaBeanImpl();
-				AutomovilBean a = new AutomovilBeanImpl();
-				ConductorBean c = new ConductorBeanImpl();
-				TipoTarjetaBean tipoTarjeta = new TipoTarjetaBeanImpl();
-
+				TarjetaBeanImpl t = new TarjetaBeanImpl();
 				t.setId(rs.getInt("id_tarjeta"));
 				t.setSaldo(rs.getDouble("saldo"));
 
-				a.setPatente(rs.getString("patente"));
+				TipoTarjetaBean tipoTarjeta = new TipoTarjetaBeanImpl();
+				tipoTarjeta.setTipo(rs.getString("tipo"));
+				tipoTarjeta.setDescuento(rs.getDouble("descuento"));
+				t.setTipoTarjeta(tipoTarjeta);
+
+				AutomovilBean a = new AutomovilBeanImpl();
 				a.setModelo(rs.getString("modelo"));
 				a.setColor(rs.getString("color"));
 				a.setMarca(rs.getString("marca"));
-				a.setConductor(c);
+				a.setPatente(rs.getString("patente"));
 
+				ConductorBean c = new ConductorBeanImpl();
 				c.setApellido(rs.getString("apellido"));
 				c.setDireccion(rs.getString("direccion"));
 				c.setNombre(rs.getString("nombre"));
@@ -67,21 +72,24 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 				c.setNroDocumento(rs.getInt("dni"));
 				c.setTelefono(rs.getString("telefono"));
 
-				tipoTarjeta.setTipo(rs.getString("tipo"));
-				tipoTarjeta.setDescuento(rs.getDouble("descuento"));
-
+				a.setConductor(c);
 				t.setAutomovil(a);
-				t.setTipoTarjeta(tipoTarjeta);
 
 				tarjetas.add(t);
 			}
-
 		} catch (SQLException e) {
 			logger.error(Mensajes.getMessage("ModeloParquimetroImpl.recuperarTarjetas.error"), e);
+		} finally {
+			try {
+				if (rs != null) rs.close();
+				if (statement != null) statement.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
 		}
-
 		return tarjetas;
 	}
+
 
 	/*
 	 * Atención: Este codigo de recuperarUbicaciones (como el de recuperarParquimetros) es igual en el modeloParquimetro
@@ -184,7 +192,7 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 			}
 			String sql = "{CALL conectar(?, ?)}";
 
-			ResultSet rs = null;
+				ResultSet rs = null;
 			CallableStatement cs = null;
 			try {
 				cs = conexion.prepareCall(sql);
