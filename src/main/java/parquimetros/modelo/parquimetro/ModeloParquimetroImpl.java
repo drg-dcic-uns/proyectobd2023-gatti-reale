@@ -32,98 +32,54 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 	public ArrayList<TarjetaBean> recuperarTarjetas() throws Exception {
 		logger.info(Mensajes.getMessage("ModeloParquimetroImpl.recuperarTarjetas.logger"));
 
-		ArrayList<TarjetaBean> tarjetas = new ArrayList<TarjetaBean>();
+		ArrayList<TarjetaBean> tarjetas = new ArrayList<>();
 
-		String sql = "SELECT * FROM tarjetas";
-		String patente, tipo;
-		int id_tarjeta;
-		double saldo;
-		String sqlTemp;
-		int dni;
-		PreparedStatement statement = null, statement1 = null, statement2 = null, statement3 = null;
-		ResultSet rs = null, rs1 = null, rs2 = null, rs3 = null;
-		try {
-			statement = this.conexion.prepareStatement(sql);
-			rs = statement.executeQuery();
+		String sql = "SELECT t.id_tarjeta, t.saldo, t.tipo, a.patente, a.modelo, a.color, a.marca, " +
+				"c.dni, c.apellido, c.direccion, c.nombre, c.registro, c.telefono, " +
+				"tt.descuento " +
+				"FROM tarjetas t " +
+				"NATURAL JOIN Automoviles a ON t.patente = a.patente " +
+				"NATURAL JOIN Conductores c ON a.dni = c.dni " +
+				"NATURAL JOIN tipos_tarjeta tt ON t.tipo = tt.tipo";
+
+		try (PreparedStatement statement = this.conexion.prepareStatement(sql);
+			 ResultSet rs = statement.executeQuery()) {
 
 			while (rs.next()) {
-
-				patente = rs.getString("patente");
-				id_tarjeta = rs.getInt("id_tarjeta");
-				saldo = rs.getDouble("saldo");
-				tipo = rs.getString("tipo");
-				System.out.println("patente igual a : " + patente);
-				sqlTemp = "SELECT * FROM Automoviles where patente = ?";
-				statement1 = this.conexion.prepareStatement(sqlTemp);
-				statement1.setString(1, patente);
-
-				rs1 = statement1.executeQuery();
-
+				TarjetaBean t = new TarjetaBeanImpl();
 				AutomovilBean a = new AutomovilBeanImpl();
-				if (rs1.next()) {
-					dni = rs1.getInt("dni");
-					sqlTemp = "SELECT * FROM Conductores where dni = ?";
-
-					statement2 = this.conexion.prepareStatement(sqlTemp);
-					statement2.setInt(1, dni);
-
-
-					rs2 = statement2.executeQuery();
-					ConductorBean c = new ConductorBeanImpl();
-
-					if (rs2.next()) {
-
-						c.setApellido(rs2.getString("apellido"));
-						c.setDireccion(rs2.getString("direccion"));
-						c.setNombre(rs2.getString("nombre"));
-						c.setRegistro(rs2.getInt("registro"));
-						c.setNroDocumento(rs2.getInt("dni"));
-						c.setTelefono(rs2.getString("telefono"));
-					}
-
-					a.setModelo(rs1.getString("modelo"));
-					a.setColor(rs1.getString("color"));
-					a.setMarca(rs1.getString("marca"));
-					a.setPatente(patente);
-					a.setConductor(c);
-				}
-
-				sqlTemp = "SELECT * FROM tipos_tarjeta where tipo = ?";
-				statement3 = this.conexion.prepareStatement(sqlTemp);
-				statement3.setString(1, tipo);
-				rs3 = statement3.executeQuery();
+				ConductorBean c = new ConductorBeanImpl();
 				TipoTarjetaBean tipoTarjeta = new TipoTarjetaBeanImpl();
-				if (rs3.next()) {
 
-					tipoTarjeta.setTipo(rs3.getString("tipo"));
-					tipoTarjeta.setDescuento(rs3.getDouble("descuento"));
-				}
+				t.setId(rs.getInt("id_tarjeta"));
+				t.setSaldo(rs.getDouble("saldo"));
 
-				TarjetaBeanImpl t = new TarjetaBeanImpl();
-				t.setId(id_tarjeta);
-				t.setSaldo(saldo);
-				t.setTipoTarjeta(tipoTarjeta);
+				a.setPatente(rs.getString("patente"));
+				a.setModelo(rs.getString("modelo"));
+				a.setColor(rs.getString("color"));
+				a.setMarca(rs.getString("marca"));
+				a.setConductor(c);
+
+				c.setApellido(rs.getString("apellido"));
+				c.setDireccion(rs.getString("direccion"));
+				c.setNombre(rs.getString("nombre"));
+				c.setRegistro(rs.getInt("registro"));
+				c.setNroDocumento(rs.getInt("dni"));
+				c.setTelefono(rs.getString("telefono"));
+
+				tipoTarjeta.setTipo(rs.getString("tipo"));
+				tipoTarjeta.setDescuento(rs.getDouble("descuento"));
+
 				t.setAutomovil(a);
+				t.setTipoTarjeta(tipoTarjeta);
+
 				tarjetas.add(t);
 			}
 
-
 		} catch (SQLException e) {
 			logger.error(Mensajes.getMessage("ModeloParquimetroImpl.recuperarTarjetas.error"), e);
-		} finally {
-			try {
-				if (rs != null) rs.close();
-				if (statement != null) statement.close();
-				if (rs1 != null) rs1.close();
-				if (statement1 != null) statement1.close();
-				if (rs2 != null) rs2.close();
-				if (statement2 != null) statement2.close();
-				if (rs3 != null) rs3.close();
-				if (statement3 != null) statement3.close();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
 		}
+
 		return tarjetas;
 	}
 
