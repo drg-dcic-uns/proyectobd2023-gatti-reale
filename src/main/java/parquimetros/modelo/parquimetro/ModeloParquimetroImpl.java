@@ -175,6 +175,11 @@ public class ModeloParquimetroImpl extends ModeloImpl implements ModeloParquimet
 			throws SinSaldoSuficienteException, ParquimetroNoExisteException, TarjetaNoExisteException, Exception {
 
 		logger.info(Mensajes.getMessage("ModeloParquimetroImpl.conectarParquimetro.logger"), parquimetro.getId(), tarjeta.getId());
+		/*
+		 Hemos visto la correcion de la parte 2: "La apertura debe devolver la fecha y hora de entrada,
+		 en conectarParquimetro() la única consulta SQL debe ser la llamada al S.P."
+		 pero segun el enunciado el s.p al hacer una apertura no devuelve fecha u hora de entrada.
+		 */
 
 		try {
 			String sql1 = "Select hora_ent, fecha_ent from Estacionamientos where id_tarjeta = ? AND fecha_sal IS NULL AND hora_sal IS NULL";
