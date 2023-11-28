@@ -210,8 +210,6 @@ INNER JOIN (
 )AS s
 ON p.id_parq = s.id_parq;
 
-
-#Procedure conectar
 DELIMITER !
 create procedure conectar(IN id_tarjeta INTEGER,IN id_parq INTEGER)
 begin
@@ -244,8 +242,8 @@ begin
             set tarjeta=id_tarjeta;
             set abierto=false;
             SELECT saldo, descuento INTO saldoActual, descuentoAplicado FROM tarjetas t natural join tipos_tarjeta tt where tarjeta=t.id_tarjeta limit 1;
-            if(EXISTS(SELECT fecha_ent,hora_ent,fecha_sal,hora_sal FROM estacionamientos e WHERE tarjeta=e.id_tarjeta order by fecha_sal,hora_sal desc)) then
-                SELECT fecha_ent,hora_ent,fecha_sal,hora_sal,e.id_parq INTO fechaEntrada,horaEntrada,fechaSalida,horaSalida,parquimetro FROM estacionamientos e WHERE tarjeta=e.id_tarjeta order by fecha_sal,hora_sal desc limit 1;
+            if(EXISTS(SELECT fecha_ent,hora_ent,fecha_sal,hora_sal FROM estacionamientos e WHERE tarjeta=e.id_tarjeta and e.fecha_sal IS NULL AND e.hora_sal IS NULL)) then
+                SELECT fecha_ent,hora_ent,fecha_sal,hora_sal,e.id_parq INTO fechaEntrada,horaEntrada,fechaSalida,horaSalida,parquimetro FROM estacionamientos e WHERE tarjeta=e.id_tarjeta and e.fecha_sal IS NULL AND e.hora_sal IS NULL limit 1;
                 if(fechaSalida is NULL and  horaSalida is null) then
                     SELECT saldo INTO saldoActual FROM tarjetas t 
                     WHERE t.id_tarjeta = tarjeta 
@@ -264,7 +262,7 @@ begin
 
             end if;
 
-           if(not EXISTS(SELECT fecha_ent,hora_ent, fecha_sal, hora_sal FROM estacionamientos e WHERE tarjeta=e.id_tarjeta order by fecha_sal,hora_sal desc limit 1) or abierto=false) then
+            if(not EXISTS(SELECT fecha_ent,hora_ent, fecha_sal, hora_sal FROM estacionamientos e WHERE tarjeta=e.id_tarjeta and e.fecha_sal IS NULL AND e.hora_sal IS NULL) or abierto=false) then
                 if(saldoActual>0) then
                     set fechaEntrada=CURDATE();
                     set horaEntrada=CURTIME();
@@ -290,6 +288,21 @@ begin
 
     COMMIT;
 END !
+DELIMITER ;
+
+
+DELIMITER //
+
+CREATE TRIGGER traza_recargas
+AFTER UPDATE ON Tarjetas
+FOR EACH ROW
+BEGIN
+    IF NEW.saldo > OLD.saldo THEN
+        INSERT INTO Recargas (id_tarjeta, fecha, hora, saldo_anterior, saldo_posterior)
+        VALUES (NEW.id_tarjeta, CURDATE(), CURTIME(), OLD.saldo, NEW.saldo);
+    END IF;
+END //
+
 DELIMITER ;
 
 
